@@ -69,20 +69,15 @@ fi
 # these are not presistent in heroku
 mkdir -p ~/.julia/config
 set +H
-julia --project=$(pwd) -e "using Pkg; pkg\"instantiate\";pkg\"precompile\";
-  io = open(\"$HOME/.julia/config/startup.jl\", \"w\");
-  deps = Pkg.dependencies()
-  for (uuid, dep) in deps
-    dep.is_direct_dep || continue
-    pkgid = Base.identify_package(dep.name);
-    Base.require(pkgid);
-  end
-  for packagemodule in Base.loaded_modules
-    pkgid = packagemodule[1];
-    buildid = Base.module_build_id(packagemodule[2]);
-    uuid = pkgid.uuid == nothing ? \"nothing\" : \"\"\"Base.UUID(\"\$(pkgid.uuid)\")\"\"\";
-    println(io, \"\"\"Base.push!(Base._concrete_dependencies, Base.PkgId(\$uuid, \"\$(pkgid.name)\") => \$buildid)\"\"\");
-  end
-  close(io)"
+
+julia <<__EOF__
+import Pkg
+Pkg.add("PackageCompiler")
+using PackageCompiler
+Pkg.activate(".")
+Pkg.instantiate()
+create_sysimage(Symbol.(keys(Pkg.API.project().dependencies)),
+    precompile_statements_file=isfile("precompile.jl") ? "precompile.jl" : nothing, replace_default=true)
+__EOF__
 
 cp -r ~/.julia ${BUILD_DIR}/.julia
