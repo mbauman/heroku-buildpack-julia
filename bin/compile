@@ -83,3 +83,4 @@ create_sysimage(pkgs, precompile_statements_file=isfile("precompile.jl") ? "prec
 __EOF__
 
 cp -r ~/.julia ${BUILD_DIR}/.julia
+rm -rf ${BUILD_DIR}/.julia/registries
