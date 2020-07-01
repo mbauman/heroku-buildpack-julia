@@ -66,6 +66,14 @@ if [ "${PIPESTATUS[*]}" != "0" ]; then
   exit 1
 fi
 
+# if there is a warmup.jl file, we run it to populate precompile.jl
+# all code executed in this file will be precompiled
+if [[ -f warmup.jl ]]; then
+  # ! means that it is allowed to fail
+  ! julia --project=$(pwd) --trace-compile="precompile.jl" warmup.jl
+  ! wc -l precompile.jl
+fi
+
 # these are not presistent in heroku
 mkdir -p ~/.julia/config
 set +H
