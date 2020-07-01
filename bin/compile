@@ -57,27 +57,31 @@ export JULIA_LOAD_PATH="@:"
 echo $PATH
 echo $LD_LIBRARY_PATH
 echo $(cmake -version)
-echo $(julia -v)
 
-echo " done"
+echo "== julia installed =="
+echo $(julia -v)
+echo ""
 
 if [ "${PIPESTATUS[*]}" != "0" ]; then
   echo " !     Failed to install ${JULIA_DIST}"
   exit 1
 fi
 
-# if there is a warmup.jl file, we run it to populate precompile.jl
-# all code executed in this file will be precompiled
-if [[ -f warmup.jl ]]; then
-  # ! means that it is allowed to fail
-  ! julia -e "import Pkg; Pkg.activate(\".\"); Pkg.instantiate()"
-  ! julia --project=$(pwd) --trace-compile="precompile.jl" warmup.jl
-  ! wc -l precompile.jl
-fi
-
 # these are not presistent in heroku
 mkdir -p ~/.julia/config
 set +H
+
+# if there is a warmup.jl file, we run it to populate precompile.jl
+# all code executed in this file will be precompiled
+if [[ -f warmup.jl ]]; then
+  echo "== warmup start =="
+  # ! means that it is allowed to fail
+  ! julia -e "import Pkg; Pkg.activate(\".\"); Pkg.instantiate()"
+  ! julia --project=$(pwd) --trace-compile="precompile.jl" warmup.jl
+  echo "== warmup done =="
+  ! wc -l precompile.jl
+  echo ""
+fi
 
 julia <<__EOF__
 import Pkg
