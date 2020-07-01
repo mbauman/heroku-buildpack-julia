@@ -70,6 +70,7 @@ fi
 # all code executed in this file will be precompiled
 if [[ -f warmup.jl ]]; then
   # ! means that it is allowed to fail
+  ! julia -e "import Pkg; Pkg.activate(\".\"); Pkg.instantiate()"
   ! julia --project=$(pwd) --trace-compile="precompile.jl" warmup.jl
   ! wc -l precompile.jl
 fi
