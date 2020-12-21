@@ -18,7 +18,7 @@ cd ${BUILD_DIR}
 
 mkdir -p .profile.d
 
-DEFAULT_JULIA_VERSION=1.5.2
+DEFAULT_JULIA_VERSION=1.5.3
 JULIA_VERSION="$DEFAULT_JULIA_VERSION"
 if [[ -f Project.toml ]]; then
   JULIA_VERSION="$(sed -rn 's/^julia\s*=\s*"(.*)"/\1/p' Project.toml)"
@@ -82,7 +82,7 @@ fi
 
 julia <<__EOF__
 import Pkg
-Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="1.2.1"))
+Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="1.2.4"))
 using PackageCompiler
 Pkg.activate(".")
 Pkg.instantiate()
