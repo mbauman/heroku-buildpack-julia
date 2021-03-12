@@ -72,13 +72,20 @@ fi
 mkdir -p ~/.julia/config
 set +H
 
+if [[ -f "$ENV_DIR/HEROKU_JULIA_PROJECT" ]]; then
+JULIA_PROJECT=`cat $ENV_DIR/HEROKU_JULIA_PROJECT`
+else
+JULIA_PROJECT=$(pwd)
+fi
+
+# ! means that it is allowed to fail
+! julia -e "import Pkg; Pkg.instantiate(); Pkg.API.precompile();"
+
 # if there is a warmup.jl file, we run it to populate precompile.jl
 # all code executed in this file will be precompiled
 if [[ -f warmup.jl ]]; then
   echo "== warmup start =="
-  # ! means that it is allowed to fail
-  ! julia -e "import Pkg; Pkg.activate(\".\"); Pkg.instantiate(); Pkg.API.precompile();"
-  ! julia --project=$(pwd) --trace-compile="precompile.jl" warmup.jl
+  ! julia --trace-compile="precompile.jl" warmup.jl
   echo "== warmup done =="
   ! wc -l precompile.jl
   echo ""
@@ -89,9 +96,10 @@ if [[ -f "$ENV_DIR/HEROKU_JULIA_SKIP_SYSIMAGE" ]]; then
 else
 julia <<__EOF__
 import Pkg
+Pkg.activate(mktempdir())
 Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="1.2.4"))
 using PackageCompiler
-Pkg.activate(".")
+Pkg.activate(get(ENV, "JULIA_PROJECT", "."))
 Pkg.instantiate()
 Pkg.API.precompile()
 proj = Pkg.API.project()
