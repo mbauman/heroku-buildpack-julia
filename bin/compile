@@ -73,9 +73,9 @@ mkdir -p ~/.julia/config
 set +H
 
 if [[ -f "$ENV_DIR/HEROKU_JULIA_PROJECT" ]]; then
-JULIA_PROJECT=`cat $ENV_DIR/HEROKU_JULIA_PROJECT`
+  export JULIA_PROJECT=`cat $ENV_DIR/HEROKU_JULIA_PROJECT`
 else
-JULIA_PROJECT=$(pwd)
+  export JULIA_PROJECT=$(pwd)
 fi
 
 # ! means that it is allowed to fail
