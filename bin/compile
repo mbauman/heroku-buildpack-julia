@@ -87,18 +87,18 @@ fi
 if [[ -f "$ENV_DIR/HEROKU_JULIA_SKIP_SYSIMAGE" ]]; then
   echo "Skipping sysimage"
 else
-  julia <<__EOF__
-  import Pkg
-  Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="1.2.4"))
-  using PackageCompiler
-  Pkg.activate(".")
-  Pkg.instantiate()
-  Pkg.API.precompile()
-  proj = Pkg.API.project()
-  pkgs = Symbol.(keys(proj.dependencies))
-  proj.ispackage && push!(pkgs, Symbol(proj.name))
-  create_sysimage(pkgs, precompile_statements_file=isfile("precompile.jl") ? "precompile.jl" : String[], replace_default=true)
-  __EOF__
+julia <<__EOF__
+import Pkg
+Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="1.2.4"))
+using PackageCompiler
+Pkg.activate(".")
+Pkg.instantiate()
+Pkg.API.precompile()
+proj = Pkg.API.project()
+pkgs = Symbol.(keys(proj.dependencies))
+proj.ispackage && push!(pkgs, Symbol(proj.name))
+create_sysimage(pkgs, precompile_statements_file=isfile("precompile.jl") ? "precompile.jl" : String[], replace_default=true)
+__EOF__
 fi
 
 cp -r ~/.julia ${BUILD_DIR}/.julia
