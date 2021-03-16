@@ -93,6 +93,8 @@ fi
 
 if [[ -f "$ENV_DIR/HEROKU_JULIA_SKIP_SYSIMAGE" ]]; then
   echo "Skipping sysimage"
+  # let's import all the required packages
+  ! julia -e "import Pkg; eval(Expr(:using, (Expr(:(.), Symbol(n)) for n in keys(Pkg.API.project().dependencies))...))"
 else
 julia <<__EOF__
 import Pkg
