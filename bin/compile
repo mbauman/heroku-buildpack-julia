@@ -13,19 +13,20 @@ set-env() {
 # parse args
 BUILD_DIR=$1
 CACHE_DIR=$2
+ENV_DIR=$3
+
+echo "ENV variables:"
+ls $ENV_DIR
 
 cd ${BUILD_DIR}
 
 mkdir -p .profile.d
 
-DEFAULT_JULIA_VERSION=1.10.4
+DEFAULT_JULIA_VERSION=1.7.2
 JULIA_VERSION="$DEFAULT_JULIA_VERSION"
 if [[ -f Project.toml ]]; then
-  curl -Lo /tmp/faq https://github.com/jzelinskie/faq/releases/download/0.0.6/faq-linux-amd64
-  chmod +x /tmp/faq
-
-  JULIA_VERSION="$(/tmp/faq -Mr '.compat.julia' Project.toml -o json)"
-  [[ "$JULIA_VERSION" == "null" ]] && JULIA_VERSION="$DEFAULT_JULIA_VERSION"
+  JULIA_VERSION="$(sed -rn 's/^julia\s*=\s*"(.*)"/\1/p' Project.toml)"
+  [[ "$JULIA_VERSION" == "" ]] && JULIA_VERSION="$DEFAULT_JULIA_VERSION"
 fi
 
 JULIA_MAJOR_VERSION="$(echo "$JULIA_VERSION" | awk '{split($0,a,"."); print a[1]}')"
@@ -48,7 +49,7 @@ done
 set-env PATH '$HOME/.apt/usr/bin:$HOME/julia/bin:$PATH'
 set-env LIBRARY_PATH '$HOME/.apt/usr/lib/x86_64-linux-gnu:$HOME/julia/lib:$HOME/julia/lib/x86_64-linux-gnu:$LIBRARY_PATH'
 set-env LD_LIBRARY_PATH '$HOME/.apt/usr/lib/x86_64-linux-gnu:$HOME/julia/lib:$HOME/julia/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH'
-set-env JULIA_LOAD_PATH '@:$HOME'
+set-env JULIA_LOAD_PATH '@:$HOME:'
 
 export LIBRARY_PATH=./.apt/usr/lib/x86_64-linux-gnu:./julia/lib:./julia/lib/x86_64-linux-gnu:$LIBRARY_PATH
 export LD_LIBRARY_PATH=./.apt/usr/lib/x86_64-linux-gnu:./julia/lib:./julia/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
@@ -57,9 +58,10 @@ export JULIA_LOAD_PATH="@:"
 echo $PATH
 echo $LD_LIBRARY_PATH
 echo $(cmake -version)
-echo $(julia -v)
 
-echo " done"
+echo "== julia installed =="
+echo $(julia -v)
+echo ""
 
 if [ "${PIPESTATUS[*]}" != "0" ]; then
   echo " !     Failed to install ${JULIA_DIST}"
@@ -70,17 +72,44 @@ fi
 mkdir -p ~/.julia/config
 set +H
 
+if [[ -f "$ENV_DIR/HEROKU_JULIA_PROJECT" ]]; then
+  export JULIA_PROJECT=`cat $ENV_DIR/HEROKU_JULIA_PROJECT`
+else
+  export JULIA_PROJECT=$(pwd)
+fi
+
+# ! means that it is allowed to fail
+! julia -e "import Pkg; Pkg.instantiate(); Pkg.API.precompile();"
+
+# if there is a warmup.jl file, we run it to populate precompile.jl
+# all code executed in this file will be precompiled
+if [[ -f warmup.jl ]]; then
+  echo "== warmup start =="
+  ! julia --trace-compile="precompile.jl" warmup.jl
+  echo "== warmup done =="
+  ! wc -l precompile.jl
+  echo ""
+fi
+
+if [[ -f "$ENV_DIR/HEROKU_JULIA_SKIP_SYSIMAGE" ]]; then
+  echo "Skipping sysimage"
+  # let's import all the required packages
+  ! julia -e "import Pkg; eval(Expr(:using, (Expr(:(.), Symbol(n)) for n in keys(Pkg.API.project().dependencies))...))"
+else
 julia <<__EOF__
 import Pkg
-Pkg.add("PackageCompiler")
+Pkg.activate(mktempdir())
+Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="1.2.4"))
 using PackageCompiler
-Pkg.activate(".")
+Pkg.activate(get(ENV, "JULIA_PROJECT", "."))
 Pkg.instantiate()
+Pkg.API.precompile()
 proj = Pkg.API.project()
 pkgs = Symbol.(keys(proj.dependencies))
 proj.ispackage && push!(pkgs, Symbol(proj.name))
-create_sysimage(pkgs, precompile_statements_file=isfile("precompile.jl") ? "precompile.jl" : nothing, replace_default=true)
+create_sysimage(pkgs, precompile_statements_file=isfile("precompile.jl") ? "precompile.jl" : String[], replace_default=true)
 __EOF__
+fi
 
 cp -r ~/.julia ${BUILD_DIR}/.julia
 rm -rf ${BUILD_DIR}/.julia/registries
