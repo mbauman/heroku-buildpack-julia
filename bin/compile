@@ -99,7 +99,7 @@ else
 julia <<__EOF__
 import Pkg
 Pkg.activate(mktempdir())
-Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="1.2.4"))
+Pkg.add("PackageCompiler")
 using PackageCompiler
 Pkg.activate(get(ENV, "JULIA_PROJECT", "."))
 Pkg.instantiate()
@@ -107,9 +107,8 @@ Pkg.API.precompile()
 proj = Pkg.API.project()
 pkgs = Symbol.(keys(proj.dependencies))
 proj.ispackage && push!(pkgs, Symbol(proj.name))
-create_sysimage(pkgs, precompile_statements_file=isfile("precompile.jl") ? "precompile.jl" : String[], replace_default=true)
+create_app(".", "${BUILD_DIR}/App"; incremental=false, force=true)
 __EOF__
 fi
 
-cp -r ~/.julia ${BUILD_DIR}/.julia
-rm -rf ${BUILD_DIR}/.julia/registries
+rm -rf julia
