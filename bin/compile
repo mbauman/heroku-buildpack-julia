@@ -108,6 +108,8 @@ proj = Pkg.API.project()
 pkgs = Symbol.(keys(proj.dependencies))
 proj.ispackage && push!(pkgs, Symbol(proj.name))
 create_app(".", "${BUILD_DIR}/App"; incremental=false, force=true)
+println("${BUILD_DIR}:")
+println(readdir("${BUILD_DIR}"))
 __EOF__
 fi
 
